@@ -68,7 +68,7 @@ const REGION_MAP = [
   },
   {
     id: '11',
-    key: 'gyeongbuk',
+    key: 'kyungbuk',
     name: '경북',
     streamUrl:
       'https://5cc6beb04faf6.streamlock.net/kyungbuk/myStream/playlist.m3u8',
