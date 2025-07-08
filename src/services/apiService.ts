@@ -1,7 +1,7 @@
 import { Program, TrafficNews } from '../types';
-import { RegionService } from './regionService';
+import { RegionService, toRegionCode } from './regionService';
 
-const BASE_URL = 'https://radio2.tbn.or.kr:442';
+const BASE_URL = 'http://10.0.2.2:8080';
 
 export class ApiService {
   private static async request<T>(
@@ -18,22 +18,38 @@ export class ApiService {
         ...options,
       });
 
+      // HTTP 에러 처리
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const text = await response.text();
+        throw new Error(
+          `HTTP error! status: ${response.status}, body: ${text}`,
+        );
+      }
+
+      // Content-Type 체크
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(`Invalid content-type: ${contentType}, body: ${text}`);
       }
 
       return await response.json();
     } catch (error) {
-      console.error('API request failed:', error);
-      throw error;
+      // JSON 파싱 실패 등 모든 예외를 래핑
+      throw new Error(
+        `API request failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
     }
   }
 
   // 현재 방송 정보 가져오기
   static async getCurrentProgram(regionId: string): Promise<Program | null> {
     try {
+      const code = aCode(regionId);
       const response = await this.request<Program>(
-        `/api/program/${regionId}/current`,
+        `/api/program/${code}/current`,
       );
       return response;
     } catch (error) {
@@ -45,9 +61,8 @@ export class ApiService {
   // 지역별 프로그램 정보 가져오기
   static async getPrograms(regionId: string): Promise<Program[]> {
     try {
-      const response = await this.request<Program[]>(
-        `/api/program/${regionId}`,
-      );
+      const code = toRegionCode(regionId);
+      const response = await this.request<Program[]>(`/api/program/${code}`);
       return response;
     } catch (error) {
       console.error('Failed to get programs:', error);
@@ -58,7 +73,8 @@ export class ApiService {
   // 교통정보 가져오기
   static async getTrafficNews(regionId?: string): Promise<TrafficNews[]> {
     try {
-      const endpoint = regionId ? `/api/traffic/${regionId}` : '/api/traffic';
+      const code = regionId ? toRegionCode(regionId) : undefined;
+      const endpoint = code ? `/api/traffic/${code}` : '/api/traffic';
       const response = await this.request<TrafficNews[]>(endpoint);
       return response;
     } catch (error) {
@@ -78,7 +94,8 @@ export class ApiService {
     if (program?.sms) {
       return program.sms;
     }
-    return RegionService.getSmsNumber(regionId) || '#9977';
+    // RegionService.getSmsNumber 제거, 기본값 반환
+    return '#9977';
   }
 
   // 방송 상태 확인
@@ -103,6 +120,30 @@ export class ApiService {
     } catch (error) {
       console.error('Server health check failed:', error);
       return false;
+    }
+  }
+
+  // 지역별 onair HTML에서 방송 정보 파싱 (정규식 기반)
+  static async getCurrentProgramFromHtml(regionId: string): Promise<{
+    title: string;
+    mc: string;
+    time: string;
+    regionCode?: string;
+    regionName?: string;
+  } | null> {
+    try {
+      // regionId(숫자 코드)를 그대로 사용
+      const response = await this.request<{
+        title: string;
+        mc: string;
+        time: string;
+        regionCode?: string;
+        regionName?: string;
+      }>(`/api/tbn/broadcast/${regionId}`);
+      return response;
+    } catch (error) {
+      console.error('Failed to parse program info from HTML:', error);
+      return null;
     }
   }
 }

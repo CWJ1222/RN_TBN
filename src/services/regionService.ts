@@ -1,138 +1,124 @@
-import { Region, Program } from '../types';
+import { Region } from '../types';
+
+// src/services/regionService.ts
+
+const REGION_MAP = [
+  {
+    id: '2',
+    key: 'busan',
+    name: '부산',
+    streamUrl:
+      'https://5cc6beb04faf6.streamlock.net/busan/myStream/playlist.m3u8',
+  },
+  {
+    id: '3',
+    key: 'gwangju',
+    name: '광주',
+    streamUrl:
+      'https://5cc6beb04faf6.streamlock.net/gwangju/myStream/playlist.m3u8',
+  },
+  {
+    id: '4',
+    key: 'daegu',
+    name: '대구',
+    streamUrl:
+      'https://5cc6beb04faf6.streamlock.net/daegu/myStream/playlist.m3u8',
+  },
+  {
+    id: '5',
+    key: 'daejeon',
+    name: '대전',
+    streamUrl:
+      'https://5cc6beb04faf6.streamlock.net/daejeon/myStream/playlist.m3u8',
+  },
+  {
+    id: '6',
+    key: 'gyeongin',
+    name: '경인',
+    streamUrl:
+      'https://5cc6beb04faf6.streamlock.net/gyeongin/myStream/playlist.m3u8',
+  },
+  {
+    id: '7',
+    key: 'gangwon',
+    name: '강원',
+    streamUrl:
+      'https://5cc6beb04faf6.streamlock.net/gangwon/myStream/playlist.m3u8',
+  },
+  {
+    id: '8',
+    key: 'jeonbuk',
+    name: '전북',
+    streamUrl:
+      'https://5cc6beb04faf6.streamlock.net/jeonbuk/myStream/playlist.m3u8',
+  },
+  {
+    id: '9',
+    key: 'ulsan',
+    name: '울산',
+    streamUrl:
+      'https://5cc6beb04faf6.streamlock.net/ulsan/myStream/playlist.m3u8',
+  },
+  {
+    id: '10',
+    key: 'gyeongnam',
+    name: '경남',
+    streamUrl:
+      'https://5cc6beb04faf6.streamlock.net/gyeongnam/myStream/playlist.m3u8',
+  },
+  {
+    id: '11',
+    key: 'gyeongbuk',
+    name: '경북',
+    streamUrl:
+      'https://5cc6beb04faf6.streamlock.net/kyungbuk/myStream/playlist.m3u8',
+  },
+  {
+    id: '12',
+    key: 'jeju',
+    name: '제주',
+    streamUrl:
+      'https://5cc6beb04faf6.streamlock.net/jeju/myStream/playlist.m3u8',
+  },
+  {
+    id: '13',
+    key: 'chungbuk',
+    name: '충북',
+    streamUrl:
+      'https://5cc6beb04faf6.streamlock.net/chungbuk/myStream/playlist.m3u8',
+  },
+  {
+    id: '14',
+    key: 'chungnam',
+    name: '충남',
+    streamUrl:
+      'https://5cc6beb04faf6.streamlock.net/chungnam/myStream/playlist.m3u8',
+  },
+];
 
 export class RegionService {
-  private static regions: Region[] = [
-    {
-      id: 'busan',
-      name: '부산',
-      code: 'bs',
-      streamUrl: 'https://radio2.tbn.or.kr:442/stream/busan',
-      smsNumber: '#0949',
-    },
-    {
-      id: 'gwangju',
-      name: '광주',
-      code: 'kj',
-      streamUrl: 'https://radio2.tbn.or.kr:442/stream/gwangju',
-      smsNumber: '#0973',
-    },
-    {
-      id: 'daegu',
-      name: '대구',
-      code: 'dg',
-      streamUrl: 'https://radio2.tbn.or.kr:442/stream/daegu',
-      smsNumber: '#1039',
-    },
-    {
-      id: 'incheon',
-      name: '인천',
-      code: 'ic',
-      streamUrl: 'https://radio2.tbn.or.kr:442/stream/incheon',
-      smsNumber: '#1049',
-    },
-    {
-      id: 'daejeon',
-      name: '대전',
-      code: 'dj',
-      streamUrl: 'https://radio2.tbn.or.kr:442/stream/daejeon',
-      smsNumber: '#1059',
-    },
-    {
-      id: 'ulsan',
-      name: '울산',
-      code: 'us',
-      streamUrl: 'https://radio2.tbn.or.kr:442/stream/ulsan',
-      smsNumber: '#1069',
-    },
-    {
-      id: 'sejong',
-      name: '세종',
-      code: 'sj',
-      streamUrl: 'https://radio2.tbn.or.kr:442/stream/sejong',
-      smsNumber: '#1079',
-    },
-    {
-      id: 'jeju',
-      name: '제주',
-      code: 'jj',
-      streamUrl: 'https://radio2.tbn.or.kr:442/stream/jeju',
-      smsNumber: '#1089',
-    },
-    {
-      id: 'gangwon',
-      name: '강원',
-      code: 'gw',
-      streamUrl: 'https://radio2.tbn.or.kr:442/stream/gangwon',
-      smsNumber: '#1099',
-    },
-    {
-      id: 'chungbuk',
-      name: '충북',
-      code: 'cb',
-      streamUrl: 'https://radio2.tbn.or.kr:442/stream/chungbuk',
-      smsNumber: '#1109',
-    },
-    {
-      id: 'chungnam',
-      name: '충남',
-      code: 'cn',
-      streamUrl: 'https://radio2.tbn.or.kr:442/stream/chungnam',
-      smsNumber: '#1119',
-    },
-    {
-      id: 'jeonbuk',
-      name: '전북',
-      code: 'jb',
-      streamUrl: 'https://radio2.tbn.or.kr:442/stream/jeonbuk',
-      smsNumber: '#1129',
-    },
-    {
-      id: 'jeonnam',
-      name: '전남',
-      code: 'jn',
-      streamUrl: 'https://radio2.tbn.or.kr:442/stream/jeonnam',
-      smsNumber: '#1139',
-    },
-    {
-      id: 'gyeongbuk',
-      name: '경북',
-      code: 'gb',
-      streamUrl: 'https://radio2.tbn.or.kr:442/stream/gyeongbuk',
-      smsNumber: '#1149',
-    },
-    {
-      id: 'gyeongnam',
-      name: '경남',
-      code: 'gn',
-      streamUrl: 'https://radio2.tbn.or.kr:442/stream/gyeongnam',
-      smsNumber: '#1159',
-    },
-  ];
-
-  static getAllRegions(): Region[] {
-    return this.regions;
-  }
-
-  static getRegionById(id: string): Region | undefined {
-    return this.regions.find(region => region.id === id);
-  }
-
-  static getRegionByCode(code: string): Region | undefined {
-    return this.regions.find(region => region.code === code);
-  }
-
   static getStreamUrl(regionId: string): string | null {
-    const region = this.getRegionById(regionId);
-    return region?.streamUrl || null;
+    const region = REGION_MAP.find(
+      r => r.id === regionId || r.key === regionId || r.name === regionId,
+    );
+    return region ? region.streamUrl : null;
   }
 
-  static getSmsNumber(regionId: string): string | null {
-    const region = this.getRegionById(regionId);
-    return region?.smsNumber || null;
+  static getRegionKey(regionId: string): string | null {
+    const region = REGION_MAP.find(
+      r => r.id === regionId || r.name === regionId,
+    );
+    return region ? region.key : null;
   }
 
   static getRegionName(regionId: string): string | null {
-    const region = this.getRegionById(regionId);
-    return region?.name || null;
+    const region = REGION_MAP.find(
+      r => r.id === regionId || r.key === regionId,
+    );
+    return region ? region.name : null;
+  }
+
+  static getAllRegions(): { id: string; name: string }[] {
+    return REGION_MAP.map(r => ({ id: r.id, name: r.name }));
   }
 }

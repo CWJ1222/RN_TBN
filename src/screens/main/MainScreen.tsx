@@ -9,28 +9,37 @@ import {
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { Button, LoadingSpinner } from '../../components/common';
+import { AudioPlayer } from '../../components/audio';
 import { RootState } from '../../store/store';
 import {
   setPlaying,
   setPaused,
-  setCurrentProgram,
+  setCurrentRegion,
 } from '../../store/slices/audioSlice';
-import { ApiService } from '../../services/apiService';
 import { RegionService } from '../../services/regionService';
+import { AudioService } from '../../services/audioService';
+import { ApiService } from '../../services/apiService';
+import RegionSelector from '../../components/RegionSelector/RegionSelector';
 
 const MainScreen: React.FC = () => {
   const dispatch = useDispatch();
-  const { isPlaying, currentProgram, currentRegion } = useSelector(
+  const { isPlaying, currentRegion } = useSelector(
     (state: RootState) => state.audio,
   );
   const { username } = useSelector((state: RootState) => state.user);
 
-  const [loading, setLoading] = useState(false);
   const [regionName, setRegionName] = useState('부산');
+  const [regionSelectorVisible, setRegionSelectorVisible] = useState(false);
+  const [programInfo, setProgramInfo] = useState<{
+    title: string;
+    mc: string;
+    time: string;
+  } | null>(null);
+  const [loadingProgram, setLoadingProgram] = useState(true); // 앱 시작 시 로딩 상태로 시작
 
   useEffect(() => {
-    loadCurrentProgram();
     updateRegionName();
+    fetchProgramInfo();
   }, [currentRegion]);
 
   const updateRegionName = () => {
@@ -40,17 +49,18 @@ const MainScreen: React.FC = () => {
     }
   };
 
-  const loadCurrentProgram = async () => {
-    setLoading(true);
+  const fetchProgramInfo = async () => {
+    setLoadingProgram(true);
     try {
-      const program = await ApiService.getCurrentProgram(currentRegion);
-      if (program) {
-        dispatch(setCurrentProgram(program));
-      }
-    } catch (error) {
-      console.error('Failed to load current program:', error);
+      console.log('방송 정보 요청 중...', currentRegion);
+      const info = await ApiService.getCurrentProgramFromHtml(currentRegion);
+      console.log('방송 정보 수신:', info);
+      setProgramInfo(info);
+    } catch (e) {
+      console.error('방송 정보 로드 실패:', e);
+      setProgramInfo(null);
     } finally {
-      setLoading(false);
+      setLoadingProgram(false);
     }
   };
 
@@ -59,10 +69,16 @@ const MainScreen: React.FC = () => {
       dispatch(setPaused(true));
     } else {
       try {
-        const streamUrl = ApiService.getStreamUrl(currentRegion);
+        const streamUrl = RegionService.getStreamUrl(currentRegion);
         if (streamUrl) {
-          // 여기서 실제 오디오 스트리밍을 시작합니다
-          // react-native-track-player를 사용할 예정
+          const isAudio = await AudioService.checkStreamUrlIsAudio(streamUrl);
+          if (!isAudio) {
+            Alert.alert(
+              '재생 오류',
+              '이 URL은 오디오 스트림이 아닙니다. 관리자에게 문의하세요.',
+            );
+            return;
+          }
           dispatch(setPlaying(true));
         } else {
           Alert.alert('오류', '스트리밍 URL을 가져올 수 없습니다.');
@@ -75,30 +91,18 @@ const MainScreen: React.FC = () => {
   };
 
   const handleSmsPress = () => {
-    const smsNumber = ApiService.getSmsNumber(
-      currentRegion,
-      currentProgram || undefined,
-    );
-    Alert.alert(
-      '문자 참여',
-      `문자 번호: ${smsNumber}\n\n문자 앱으로 이동하시겠습니까?`,
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '확인',
-          onPress: () => {
-            // 여기서 SMS 앱을 열거나 웹뷰로 문자 참여 페이지를 열 수 있습니다
-            console.log('SMS 참여:', smsNumber);
-          },
-        },
-      ],
-    );
+    Alert.alert('문자 참여', '문자 참여 기능은 추후 제공될 예정입니다.', [
+      { text: '확인' },
+    ]);
   };
 
   const handleRegionPress = () => {
-    Alert.alert('지역 선택', '지역 선택 기능은 추후 구현됩니다.', [
-      { text: '확인' },
-    ]);
+    setRegionSelectorVisible(true);
+  };
+
+  const handleRegionSelect = (regionId: string) => {
+    dispatch(setCurrentRegion(regionId));
+    setRegionSelectorVisible(false);
   };
 
   return (
@@ -117,35 +121,46 @@ const MainScreen: React.FC = () => {
       </View>
 
       <View style={styles.mainContent}>
+        {/* 방송 정보 표시 */}
         <View style={styles.programInfo}>
-          {currentProgram ? (
+          {loadingProgram ? (
+            <View style={styles.loadingContainer}>
+              <LoadingSpinner
+                visible={true}
+                text="방송 정보를 불러오는 중..."
+              />
+            </View>
+          ) : programInfo ? (
             <>
-              <Text style={styles.programTitle}>{currentProgram.title}</Text>
-              <Text style={styles.programMc}>MC: {currentProgram.mc}</Text>
-              <Text style={styles.programTime}>
-                {currentProgram.startTime} - {currentProgram.endTime}
-              </Text>
-              {currentProgram.description && (
-                <Text style={styles.programDescription}>
-                  {currentProgram.description}
-                </Text>
-              )}
+              <Text style={styles.programTitle}>{programInfo.title}</Text>
+              <Text style={styles.programMc}>MC: {programInfo.mc}</Text>
+              <Text style={styles.programTime}>{programInfo.time}</Text>
             </>
           ) : (
-            <Text style={styles.noProgramText}>
-              현재 방송 정보를 불러오는 중...
-            </Text>
+            <View style={styles.errorContainer}>
+              <Text style={styles.noProgramText}>
+                방송 정보를 가져올 수 없습니다.
+              </Text>
+              <Button
+                title="다시 시도"
+                onPress={fetchProgramInfo}
+                variant="outline"
+                size="small"
+                style={styles.retryButton}
+              />
+            </View>
           )}
         </View>
 
-        <View style={styles.controls}>
-          <Button
-            title={isPlaying ? '일시정지' : '재생'}
-            onPress={handlePlayPress}
-            size="large"
-            style={styles.playButton}
-          />
+        {/* 오디오 플레이어 */}
+        <AudioPlayer
+          streamUrl={RegionService.getStreamUrl(currentRegion) || undefined}
+          onError={error => {
+            Alert.alert('재생 오류', error);
+          }}
+        />
 
+        <View style={styles.controls}>
           <Button
             title="문자 참여"
             onPress={handleSmsPress}
@@ -160,7 +175,12 @@ const MainScreen: React.FC = () => {
         <Text style={styles.footerText}>TBN 교통방송 - 실시간 교통정보</Text>
       </View>
 
-      <LoadingSpinner visible={loading} text="방송 정보 로딩 중..." overlay />
+      {/* 지역 선택 모달 */}
+      <RegionSelector
+        visible={regionSelectorVisible}
+        onSelect={handleRegionSelect}
+        onClose={() => setRegionSelectorVisible(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -208,45 +228,46 @@ const styles = StyleSheet.create({
     paddingVertical: 32,
   },
   programInfo: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 24,
   },
   programTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#000000',
+    color: '#000',
+    marginBottom: 8,
     textAlign: 'center',
-    marginBottom: 12,
   },
   programMc: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#007AFF',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   programTime: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#8E8E93',
-    marginBottom: 16,
-  },
-  programDescription: {
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: 20,
+    marginBottom: 4,
   },
   noProgramText: {
     fontSize: 16,
     color: '#8E8E93',
     textAlign: 'center',
   },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  retryButton: {
+    marginTop: 12,
+  },
   controls: {
     gap: 16,
-  },
-  playButton: {
-    marginBottom: 8,
   },
   smsButton: {
     marginBottom: 8,

@@ -5,7 +5,7 @@ const initialState: AudioState = {
   isPlaying: false,
   isPaused: false,
   currentProgram: null,
-  currentRegion: 'busan', // 기본값: 부산
+  currentRegion: '2', // 기본값: 부산 (숫자 코드)
   volume: 1.0,
 };
 
