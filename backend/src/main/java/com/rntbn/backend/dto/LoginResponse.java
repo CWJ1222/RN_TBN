@@ -3,7 +3,8 @@ package com.rntbn.backend.dto;
 public class LoginResponse {
 
     private String token;
-    private String username;
+    private String email;
+    private String nickname;
     private String message;
 
     // Default constructor
@@ -11,9 +12,10 @@ public class LoginResponse {
     }
 
     // Constructor with parameters
-    public LoginResponse(String token, String username, String message) {
+    public LoginResponse(String token, String email, String nickname, String message) {
         this.token = token;
-        this.username = username;
+        this.email = email;
+        this.nickname = nickname;
         this.message = message;
     }
 
@@ -26,12 +28,20 @@ public class LoginResponse {
         this.token = token;
     }
 
-    public String getUsername() {
-        return username;
+    public String getEmail() {
+        return email;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getNickname() {
+        return nickname;
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
     }
 
     public String getMessage() {

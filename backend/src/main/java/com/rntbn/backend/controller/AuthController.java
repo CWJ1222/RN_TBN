@@ -1,16 +1,21 @@
 package com.rntbn.backend.controller;
 
-import com.rntbn.backend.dto.LoginRequest;
 import com.rntbn.backend.dto.LoginResponse;
+import com.rntbn.backend.dto.GoogleLoginRequest;
 import com.rntbn.backend.entity.User;
 import com.rntbn.backend.service.JwtService;
 import com.rntbn.backend.service.UserService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Optional;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.jackson2.JacksonFactory;
+import java.util.Collections;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
+import com.rntbn.backend.dto.UpdateNicknameRequest;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -23,36 +28,80 @@ public class AuthController {
     @Autowired
     private JwtService jwtService;
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
-        Optional<User> userOpt = userService.findByUsername(loginRequest.getUsername());
+    @PostMapping("/google")
+    public ResponseEntity<LoginResponse> googleLogin(@RequestBody GoogleLoginRequest googleLoginRequest) {
+        String idToken = googleLoginRequest.getIdToken();
+        System.out.println("📥 받은 idToken: " + idToken);
 
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body(new LoginResponse(null, null, "사용자를 찾을 수 없습니다."));
+        try {
+
+            NetHttpTransport transport = new NetHttpTransport();
+            JacksonFactory jsonFactory = JacksonFactory.getDefaultInstance();
+
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(transport, jsonFactory)
+                    .setAudience(Collections
+                            .singletonList("929637116364-eqsl60da7giesc340fk6evl9e9i4bts2.apps.googleusercontent.com"))
+                    .build();
+
+            GoogleIdToken idTokenPayload = verifier.verify(idToken);
+
+            if (idTokenPayload == null) {
+                System.out.println("❌ Google token verification failed.");
+                return ResponseEntity.badRequest()
+                        .body(new LoginResponse(null, null, null, "유효하지 않은 Google ID 토큰입니다."));
+            }
+
+            Payload payload = idTokenPayload.getPayload();
+            System.out.println("✅ 토큰 payload 이메일: " + payload.getEmail());
+
+            String email = payload.getEmail();
+            String name = (String) payload.get("name");
+            String picture = (String) payload.get("picture");
+            String providerId = payload.getSubject();
+
+            User user = userService.createOrUpdateSocialUser(
+                    email,
+                    name,
+                    picture,
+                    "google",
+                    providerId);
+
+            String token = jwtService.generateToken(user.getEmail());
+            return ResponseEntity.ok(new LoginResponse(token, user.getEmail(), user.getNickname(), "구글 로그인 성공"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new LoginResponse(null, null, null, "구글 로그인 실패: " + e.getMessage()));
         }
-
-        User user = userOpt.get();
-
-        if (!userService.validatePassword(loginRequest.getPassword(), user.getPassword())) {
-            return ResponseEntity.badRequest().body(new LoginResponse(null, null, "비밀번호가 일치하지 않습니다."));
-        }
-
-        String token = jwtService.generateToken(user.getUsername());
-
-        return ResponseEntity.ok(new LoginResponse(token, user.getUsername(), "로그인 성공"));
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody User user) {
-        if (userService.existsByUsername(user.getUsername())) {
-            return ResponseEntity.badRequest().body("이미 존재하는 사용자명입니다.");
-        }
+    // 닉네임 수정 API
+    @PutMapping("/profile/nickname")
+    public ResponseEntity<LoginResponse> updateNickname(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody UpdateNicknameRequest request) {
+        try {
+            // JWT 토큰에서 이메일 추출
+            String token = authHeader.replace("Bearer ", "");
+            String email = jwtService.extractEmail(token);
 
-        if (userService.existsByEmail(user.getEmail())) {
-            return ResponseEntity.badRequest().body("이미 존재하는 이메일입니다.");
-        }
+            if (email == null) {
+                return ResponseEntity.badRequest()
+                        .body(new LoginResponse(null, null, null, "유효하지 않은 토큰입니다."));
+            }
 
-        User savedUser = userService.save(user);
-        return ResponseEntity.ok("회원가입이 완료되었습니다.");
+            // 닉네임 업데이트
+            User updatedUser = userService.updateNickname(email, request.getNickname());
+
+            return ResponseEntity.ok(new LoginResponse(
+                    token,
+                    updatedUser.getEmail(),
+                    updatedUser.getNickname(),
+                    "닉네임이 성공적으로 수정되었습니다."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new LoginResponse(null, null, null, "닉네임 수정 실패: " + e.getMessage()));
+        }
     }
+
+    // (애플 로그인 엔드포인트도 필요시 추가)
 }

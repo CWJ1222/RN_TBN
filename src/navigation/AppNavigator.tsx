@@ -1,17 +1,13 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useSelector } from 'react-redux';
-import { RootState } from '../store/store';
-import LoginScreen from '../screens/login/LoginScreen';
 import MainScreen from '../screens/main/MainScreen';
+import LoginScreen from '../screens/login/LoginScreen';
 import { RootStackParamList } from '../types/navigation';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
 const AppNavigator: React.FC = () => {
-  const { isLoggedIn } = useSelector((state: RootState) => state.user);
-
   return (
     <NavigationContainer>
       <Stack.Navigator
@@ -19,11 +15,8 @@ const AppNavigator: React.FC = () => {
           headerShown: false,
         }}
       >
-        {!isLoggedIn ? (
-          <Stack.Screen name="Login" component={LoginScreen} />
-        ) : (
-          <Stack.Screen name="Main" component={MainScreen} />
-        )}
+        <Stack.Screen name="Main" component={MainScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

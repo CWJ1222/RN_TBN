@@ -32,7 +32,7 @@ spring:
 
 # JWT 설정
 jwt:
-  secret: your-secret-key-here-make-it-long-and-secure-in-production
+  secret: 'this-is-a-very-very-long-and-secure-secret-key-for-hs512-algorithm-1234567890!@#$%^&*()_+=-qwerty'
   expiration: 86400000 # 24시간
 
 # CORS 설정

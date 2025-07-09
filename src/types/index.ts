@@ -1,8 +1,7 @@
 // 사용자 관련 타입
 export interface User {
-  id: string;
-  username: string;
-  nickname?: string;
+  email: string;
+  nickname: string;
   isLoggedIn: boolean;
 }
 

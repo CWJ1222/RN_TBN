@@ -1,5 +1,6 @@
+import { Alert } from 'react-native';
 import { Program, TrafficNews } from '../types';
-import { RegionService, toRegionCode } from './regionService';
+import { RegionService } from './regionService';
 
 const BASE_URL = 'http://10.0.2.2:8080';
 
@@ -47,9 +48,8 @@ export class ApiService {
   // 현재 방송 정보 가져오기
   static async getCurrentProgram(regionId: string): Promise<Program | null> {
     try {
-      const code = aCode(regionId);
       const response = await this.request<Program>(
-        `/api/program/${code}/current`,
+        `/api/program/${regionId}/current`,
       );
       return response;
     } catch (error) {
@@ -61,8 +61,9 @@ export class ApiService {
   // 지역별 프로그램 정보 가져오기
   static async getPrograms(regionId: string): Promise<Program[]> {
     try {
-      const code = toRegionCode(regionId);
-      const response = await this.request<Program[]>(`/api/program/${code}`);
+      const response = await this.request<Program[]>(
+        `/api/program/${regionId}`,
+      );
       return response;
     } catch (error) {
       console.error('Failed to get programs:', error);
@@ -73,8 +74,7 @@ export class ApiService {
   // 교통정보 가져오기
   static async getTrafficNews(regionId?: string): Promise<TrafficNews[]> {
     try {
-      const code = regionId ? toRegionCode(regionId) : undefined;
-      const endpoint = code ? `/api/traffic/${code}` : '/api/traffic';
+      const endpoint = regionId ? `/api/traffic/${regionId}` : '/api/traffic';
       const response = await this.request<TrafficNews[]>(endpoint);
       return response;
     } catch (error) {
@@ -120,6 +120,74 @@ export class ApiService {
     } catch (error) {
       console.error('Server health check failed:', error);
       return false;
+    }
+  }
+
+  // 구글 로그인
+  static async googleLogin(idToken: string): Promise<{
+    token: string;
+    email: string;
+    nickname: string;
+    message: string;
+  } | null> {
+    try {
+      // Alert.alert('googleLogin 호출됨');
+      console.log('👉 보내는 idToken:', idToken);
+      const response = await this.request<{
+        token: string;
+        email: string;
+        nickname: string;
+        message: string;
+      }>('/api/auth/google', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json', // 명시적으로 한 번 더
+        },
+        body: JSON.stringify({
+          idToken,
+        }),
+      });
+      console.log('✅ 서버 응답:', response);
+
+      return response;
+    } catch (error) {
+      console.error('Google login failed:', error);
+      return null;
+    }
+  }
+
+  // 닉네임 수정
+  static async updateNickname(
+    token: string,
+    nickname: string,
+  ): Promise<{
+    token: string;
+    email: string;
+    nickname: string;
+    message: string;
+  } | null> {
+    try {
+      const response = await this.request<{
+        token: string;
+        email: string;
+        nickname: string;
+        message: string;
+      }>('/api/auth/profile/nickname', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          nickname,
+        }),
+      });
+      console.log('✅ 닉네임 수정 응답:', response);
+
+      return response;
+    } catch (error) {
+      console.error('Nickname update failed:', error);
+      return null;
     }
   }
 

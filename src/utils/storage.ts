@@ -3,7 +3,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export class StorageService {
   private static readonly KEYS = {
     USER_INFO: 'user_info',
-    USER_CREDENTIALS: 'user_credentials',
     CURRENT_REGION: 'current_region',
     AUDIO_SETTINGS: 'audio_settings',
     RECORDING_SETTINGS: 'recording_settings',
@@ -11,7 +10,7 @@ export class StorageService {
   };
 
   // 사용자 정보 저장
-  static async saveUserInfo(userInfo: any): Promise<void> {
+  static async saveUserInfo(userInfo: { email: string }): Promise<void> {
     try {
       await AsyncStorage.setItem(this.KEYS.USER_INFO, JSON.stringify(userInfo));
     } catch (error) {
@@ -20,44 +19,12 @@ export class StorageService {
   }
 
   // 사용자 정보 가져오기
-  static async getUserInfo(): Promise<any | null> {
+  static async getUserInfo(): Promise<{ email: string } | null> {
     try {
       const userInfo = await AsyncStorage.getItem(this.KEYS.USER_INFO);
       return userInfo ? JSON.parse(userInfo) : null;
     } catch (error) {
       console.error('Failed to get user info:', error);
-      return null;
-    }
-  }
-
-  // 로그인 정보 저장 (아이디/비밀번호)
-  static async saveCredentials(
-    username: string,
-    password: string,
-  ): Promise<void> {
-    try {
-      const credentials = { username, password };
-      await AsyncStorage.setItem(
-        this.KEYS.USER_CREDENTIALS,
-        JSON.stringify(credentials),
-      );
-    } catch (error) {
-      console.error('Failed to save credentials:', error);
-    }
-  }
-
-  // 로그인 정보 가져오기
-  static async getCredentials(): Promise<{
-    username: string;
-    password: string;
-  } | null> {
-    try {
-      const credentials = await AsyncStorage.getItem(
-        this.KEYS.USER_CREDENTIALS,
-      );
-      return credentials ? JSON.parse(credentials) : null;
-    } catch (error) {
-      console.error('Failed to get credentials:', error);
       return null;
     }
   }
@@ -130,10 +97,7 @@ export class StorageService {
   // 모든 데이터 삭제 (로그아웃 시)
   static async clearAllData(): Promise<void> {
     try {
-      await AsyncStorage.multiRemove([
-        this.KEYS.USER_INFO,
-        this.KEYS.USER_CREDENTIALS,
-      ]);
+      await AsyncStorage.multiRemove([this.KEYS.USER_INFO]);
     } catch (error) {
       console.error('Failed to clear all data:', error);
     }

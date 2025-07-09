@@ -6,6 +6,8 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Alert,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { Button, LoadingSpinner } from '../../components/common';
@@ -16,26 +18,37 @@ import {
   setPaused,
   setCurrentRegion,
 } from '../../store/slices/audioSlice';
+import { logout, updateProfile } from '../../store/slices/userSlice';
 import { RegionService } from '../../services/regionService';
 import { AudioService } from '../../services/audioService';
 import { ApiService } from '../../services/apiService';
 import RegionSelector from '../../components/RegionSelector/RegionSelector';
+import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const MainScreen: React.FC = () => {
   const dispatch = useDispatch();
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { isPlaying, currentRegion } = useSelector(
     (state: RootState) => state.audio,
   );
-  const { username } = useSelector((state: RootState) => state.user);
+  const { email, nickname, isLoggedIn } = useSelector(
+    (state: RootState) => state.user,
+  );
 
   const [regionName, setRegionName] = useState('부산');
   const [regionSelectorVisible, setRegionSelectorVisible] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
   const [programInfo, setProgramInfo] = useState<{
     title: string;
     mc: string;
     time: string;
   } | null>(null);
   const [loadingProgram, setLoadingProgram] = useState(true); // 앱 시작 시 로딩 상태로 시작
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [newNickname, setNewNickname] = useState(nickname || '');
 
   useEffect(() => {
     updateRegionName();
@@ -105,11 +118,77 @@ const MainScreen: React.FC = () => {
     setRegionSelectorVisible(false);
   };
 
+  const handleMenuPress = () => {
+    setMenuVisible(true);
+  };
+
+  const handleLoginPress = () => {
+    setMenuVisible(false);
+    (navigation as any).navigate('Login');
+  };
+
+  const handleLogoutPress = async () => {
+    setMenuVisible(false);
+
+    try {
+      // 저장된 로그인 정보 삭제
+      await AsyncStorage.removeItem('authToken');
+      await AsyncStorage.removeItem('email');
+      await AsyncStorage.removeItem('nickname');
+
+      // Redux 상태 업데이트
+      dispatch(logout());
+
+      Alert.alert('로그아웃', '로그아웃되었습니다.');
+    } catch (error) {
+      console.error('Failed to logout:', error);
+      Alert.alert('오류', '로그아웃 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleEditProfile = () => {
+    setNewNickname(nickname || '');
+    setEditModalVisible(true);
+  };
+
+  const handleSaveNickname = async () => {
+    try {
+      // 저장된 토큰 가져오기
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        Alert.alert('오류', '로그인 정보를 찾을 수 없습니다.');
+        return;
+      }
+
+      // 백엔드에 닉네임 수정 요청
+      const response = await ApiService.updateNickname(token, newNickname);
+
+      if (response) {
+        // 성공 시 Redux 상태 업데이트
+        dispatch(updateProfile({ nickname: response.nickname }));
+
+        // AsyncStorage에도 저장
+        await AsyncStorage.setItem('nickname', response.nickname);
+
+        setEditModalVisible(false);
+        Alert.alert('성공', '닉네임이 수정되었습니다.');
+      } else {
+        Alert.alert('오류', '닉네임 수정에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Failed to update nickname:', error);
+      Alert.alert('오류', '닉네임 수정 중 오류가 발생했습니다.');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <TouchableOpacity onPress={handleMenuPress} style={styles.menuButton}>
+          <Text style={styles.menuIcon}>☰</Text>
+        </TouchableOpacity>
         <Text style={styles.welcomeText}>
-          안녕하세요, {username || '게스트'}님!
+          안녕하세요, {nickname ? nickname : email || '사용자'}님!
         </Text>
         <TouchableOpacity
           onPress={handleRegionPress}
@@ -181,6 +260,93 @@ const MainScreen: React.FC = () => {
         onSelect={handleRegionSelect}
         onClose={() => setRegionSelectorVisible(false)}
       />
+
+      {/* 메뉴 모달 */}
+      <Modal
+        visible={menuVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setMenuVisible(false)}
+        >
+          <View style={styles.menuContainer}>
+            <View style={styles.menuHeader}>
+              <Text style={styles.menuTitle}>메뉴</Text>
+              <TouchableOpacity
+                onPress={() => setMenuVisible(false)}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeIcon}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.menuItems}>
+              {!isLoggedIn ? (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={handleLoginPress}
+                >
+                  <Text style={styles.menuItemText}>로그인</Text>
+                </TouchableOpacity>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={handleEditProfile}
+                  >
+                    <Text style={styles.menuItemText}>정보수정</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={handleLogoutPress}
+                  >
+                    <Text style={styles.menuItemText}>로그아웃</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 닉네임 수정 모달 */}
+      <Modal
+        visible={editModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setEditModalVisible(false)}
+        >
+          <View style={[styles.menuContainer, { paddingTop: 30 }]}>
+            <Text style={styles.menuTitle}>닉네임 수정</Text>
+            <TextInput
+              style={{
+                borderWidth: 1,
+                borderColor: '#E5E5EA',
+                borderRadius: 8,
+                padding: 12,
+                marginVertical: 16,
+              }}
+              value={newNickname}
+              onChangeText={setNewNickname}
+              placeholder="닉네임 입력"
+              maxLength={20}
+            />
+            <Button
+              title="저장"
+              onPress={handleSaveNickname}
+              style={{ width: '100%' }}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -198,6 +364,13 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
+  },
+  menuButton: {
+    padding: 8,
+  },
+  menuIcon: {
+    fontSize: 24,
+    color: '#007AFF',
   },
   welcomeText: {
     fontSize: 16,
@@ -282,6 +455,52 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 14,
     color: '#8E8E93',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+  },
+  menuContainer: {
+    backgroundColor: '#FFFFFF',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    paddingTop: 50,
+    paddingBottom: 20,
+  },
+  menuHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  menuTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  closeButton: {
+    padding: 8,
+  },
+  closeIcon: {
+    fontSize: 20,
+    color: '#8E8E93',
+  },
+  menuItems: {
+    paddingTop: 16,
+  },
+  menuItem: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2F2F7',
+  },
+  menuItemText: {
+    fontSize: 16,
+    color: '#007AFF',
   },
 });
 

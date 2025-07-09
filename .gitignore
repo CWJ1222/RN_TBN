@@ -1,6 +1,32 @@
+# React Native
+node_modules/
+android/.gradle/
+android/app/build/
+android/build/
+android/.idea/
+android/.cxx/
+android/local.properties
+android/app/debug.keystore
+ios/Pods/
+ios/Podfile.lock
+ios/build/
+ios/DerivedData/
+ios/*.xcworkspace
+ios/*.xcuserstate
+ios/*.xcuserdata
+ios/.DS_Store
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcuserstate
+
 # OSX
 #
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
 
 # Xcode
 #
@@ -74,4 +100,30 @@ yarn-error.log
 !.yarn/sdks
 !.yarn/versions
 
-/backend/target/
+# Spring Boot
+backend/target/
+backend/.idea/
+backend/.classpath
+backend/.project
+backend/.settings/
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+backend/.gradle/
+backend/build/
+*.log
+
+# 환경 변수/비밀키
+.env
+.env.*
+*.keystore
+*.jks
+*.pem
+*.p12
+*.crt
+*.key
+
+# 테스트/임시 파일
+*.tmp
+*.temp
+*.bak

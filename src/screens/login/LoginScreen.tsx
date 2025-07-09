@@ -5,166 +5,216 @@ import {
   StyleSheet,
   SafeAreaView,
   Alert,
-  KeyboardAvoidingView,
   Platform,
-  ScrollView,
 } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { Button, Input, LoadingSpinner } from '../../components/common';
+import { useDispatch } from 'react-redux';
+import { Button, LoadingSpinner } from '../../components/common';
 import { login } from '../../store/slices/userSlice';
-import { StorageService } from '../../utils/storage';
-import { RootState } from '../../store/store';
+import { useNavigation } from '@react-navigation/native';
+import { ApiService } from '../../services/apiService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// 구글 로그인 관련 import
+import {
+  GoogleSignin,
+  statusCodes,
+  User as GoogleUser,
+} from '@react-native-google-signin/google-signin';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const LoginScreen: React.FC = () => {
   const dispatch = useDispatch();
-  const { isLoggedIn } = useSelector((state: RootState) => state.user);
-
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{
-    username?: string;
-    password?: string;
-  }>({});
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    // 저장된 로그인 정보 불러오기
-    loadSavedCredentials();
+    // 저장된 로그인 정보 확인
+    checkSavedLogin();
   }, []);
 
-  const loadSavedCredentials = async () => {
+  // 저장된 로그인 정보 확인
+  const checkSavedLogin = async () => {
     try {
-      const credentials = await StorageService.getCredentials();
-      if (credentials) {
-        setUsername(credentials.username);
-        setPassword(credentials.password);
+      const savedToken = await AsyncStorage.getItem('authToken');
+      const savedEmail = await AsyncStorage.getItem('email');
+      const savedNickname = await AsyncStorage.getItem('nickname');
+
+      if (savedToken && savedEmail) {
+        // 저장된 토큰이 있으면 자동 로그인
+        dispatch(login({ email: savedEmail, nickname: savedNickname || '' }));
+        (navigation as any).goBack();
       }
     } catch (error) {
-      console.error('Failed to load saved credentials:', error);
+      console.error('Failed to check saved login:', error);
     }
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: { username?: string; password?: string } = {};
-
-    if (!username.trim()) {
-      newErrors.username = '아이디를 입력해주세요';
-    }
-
-    if (!password.trim()) {
-      newErrors.password = '비밀번호를 입력해주세요';
-    } else if (password.length < 4) {
-      newErrors.password = '비밀번호는 4자 이상이어야 합니다';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleLogin = async () => {
-    if (!validateForm()) return;
-
-    setLoading(true);
-
+  // 로그인 정보 저장
+  const saveLoginInfo = async (
+    token: string,
+    email: string,
+    nickname: string,
+  ) => {
     try {
-      // 로그인 정보 저장
-      await StorageService.saveCredentials(username, password);
-
-      // Redux에 로그인 정보 저장
-      dispatch(login({ username, password }));
-
-      // 사용자 정보 저장
-      const userInfo = {
-        id: `user_${Date.now()}`,
-        username,
-        isLoggedIn: true,
-      };
-      await StorageService.saveUserInfo(userInfo);
-
-      Alert.alert('로그인 성공', 'TBN 교통방송에 오신 것을 환영합니다!');
+      await AsyncStorage.setItem('authToken', token);
+      await AsyncStorage.setItem('email', email);
+      await AsyncStorage.setItem('nickname', nickname);
     } catch (error) {
-      console.error('Login failed:', error);
-      Alert.alert('로그인 실패', '로그인 중 오류가 발생했습니다.');
+      console.error('Failed to save login info:', error);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      // 구글 로그인 구현
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      console.log('google user info: ', userInfo);
+      const info: any = userInfo;
+
+      // idToken 추출 보완
+      const idToken = info.idToken || (info.data && info.data.idToken);
+      const user = info.user || (info.data && info.data.user);
+
+      if (!idToken) {
+        Alert.alert('로그인 실패', 'Google ID 토큰을 받을 수 없습니다.');
+        return;
+      }
+
+      try {
+        const response = await ApiService.googleLogin(idToken);
+        console.log('서버 응답:', response);
+
+        if (response) {
+          // 로그인 정보 저장
+          await saveLoginInfo(
+            response.token,
+            response.email,
+            response.nickname,
+          );
+
+          // Redux 상태 업데이트
+          dispatch(
+            login({ email: response.email, nickname: response.nickname }),
+          );
+
+          // Alert.alert('로그인 성공', '구글 계정으로 로그인되었습니다.');
+          (navigation as any).goBack();
+        } else {
+          Alert.alert('로그인 실패', '서버 연결에 실패했습니다.');
+        }
+      } catch (e) {
+        console.log('로그인 API 실패:', e);
+        Alert.alert('로그인 실패', '서버 연결에 실패했습니다.');
+      }
+    } catch (error: any) {
+      console.error('Google login failed:', error);
+
+      // 구글 로그인 에러 처리
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        Alert.alert('로그인 취소', '로그인이 취소되었습니다.');
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        Alert.alert('로그인 진행 중', '이미 로그인이 진행 중입니다.');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert(
+          '서비스 오류',
+          'Google Play Services를 사용할 수 없습니다.',
+        );
+      } else {
+        Alert.alert('로그인 실패', '구글 로그인 중 오류가 발생했습니다.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+  // const handleGoogleLogin = async () => {
+  //   setLoading(true);
+  //   Alert.alert('구글 로그인 버튼 클릭됨');
+  //   try {
+  //     await GoogleSignin.hasPlayServices();
+  //     const userInfo = await GoogleSignin.signIn();
+  //     Alert.alert('userInfo: ' + JSON.stringify(userInfo.data?.idToken));
+  //     const signInResult = userInfo as any;
+
+  //     if (!signInResult.data?.idToken) {
+  //       Alert.alert('idToken 없음');
+  //       return;
+  //     }
+
+  //     Alert.alert('idToken 있음, googleLogin 호출');
+  //     const idToken = signInResult.data?.idToken;
+  //     const user = signInResult.user;
+
+  //     await ApiService.googleLogin(idToken);
+  //     Alert.alert('googleLogin 호출 완료');
+  //   } catch (error) {
+  //     Alert.alert('에러: ' + error);
+  //     console.error('Google login failed:', error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  const handleAppleLogin = async () => {
+    setLoading(true);
+    try {
+      // 애플 로그인 구현 (추후 구현)
+      Alert.alert('준비 중', '애플 로그인은 추후 제공될 예정입니다.');
+    } catch (error) {
+      console.error('Apple login failed:', error);
+      Alert.alert('로그인 실패', '애플 로그인 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGuestLogin = () => {
-    Alert.alert(
-      '게스트 로그인',
-      '게스트로 이용하시겠습니까?\n일부 기능이 제한될 수 있습니다.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '확인',
-          onPress: () => {
-            dispatch(login({ username: 'guest', password: '' }));
-          },
-        },
-      ],
-    );
+  const handleBackPress = () => {
+    (navigation as any).goBack();
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.header}>
-            <Text style={styles.title}>TBN 교통방송</Text>
-            <Text style={styles.subtitle}>로그인</Text>
-          </View>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <Button
+          title="← 뒤로"
+          onPress={handleBackPress}
+          variant="outline"
+          size="small"
+          style={styles.backButton}
+        />
+        <Text style={styles.title}>로그인</Text>
+      </View>
 
-          <View style={styles.form}>
-            <Input
-              label="아이디"
-              placeholder="아이디를 입력하세요"
-              value={username}
-              onChangeText={setUsername}
-              error={errors.username}
-              autoCapitalize="none"
+      <View style={styles.content}>
+        <View style={styles.logoContainer}>
+          <Text style={styles.logo}>TBN</Text>
+          <Text style={styles.subtitle}>교통방송</Text>
+        </View>
+
+        <View style={styles.loginContainer}>
+          <Text style={styles.description}>
+            소셜 계정으로 간편하게 로그인하세요
+          </Text>
+
+          {Platform.OS === 'android' ? (
+            <Button
+              title="Google로 로그인"
+              onPress={handleGoogleLogin}
+              loading={loading}
+              style={styles.googleButton}
             />
-
-            <Input
-              label="비밀번호"
-              placeholder="비밀번호를 입력하세요"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              error={errors.password}
-              autoCapitalize="none"
+          ) : (
+            <Button
+              title="Apple로 로그인"
+              onPress={handleAppleLogin}
+              loading={loading}
+              style={styles.appleButton}
             />
-
-            <View style={styles.buttonContainer}>
-              <Button
-                title="로그인"
-                onPress={handleLogin}
-                loading={loading}
-                style={styles.loginButton}
-              />
-
-              <Button
-                title="게스트로 이용하기"
-                onPress={handleGuestLogin}
-                variant="outline"
-                style={styles.guestButton}
-              />
-            </View>
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              로그인 정보는 기기에 안전하게 저장됩니다
-            </Text>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          )}
+        </View>
+      </View>
 
       <LoadingSpinner visible={loading} text="로그인 중..." overlay />
     </SafeAreaView>
@@ -176,20 +226,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  keyboardAvoidingView: {
-    flex: 1,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
   },
-  scrollContent: {
-    flexGrow: 1,
+  backButton: {
+    marginRight: 16,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  content: {
+    flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
-  header: {
+  logoContainer: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 60,
   },
-  title: {
-    fontSize: 32,
+  logo: {
+    fontSize: 48,
     fontWeight: 'bold',
     color: '#007AFF',
     marginBottom: 8,
@@ -198,25 +261,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#8E8E93',
   },
-  form: {
-    marginBottom: 32,
-  },
-  buttonContainer: {
-    gap: 16,
-  },
-  loginButton: {
-    marginTop: 8,
-  },
-  guestButton: {
-    marginTop: 8,
-  },
-  footer: {
+  loginContainer: {
     alignItems: 'center',
   },
-  footerText: {
-    fontSize: 14,
+  description: {
+    fontSize: 16,
     color: '#8E8E93',
     textAlign: 'center',
+    marginBottom: 32,
+  },
+  googleButton: {
+    backgroundColor: '#4285F4',
+    width: '100%',
+  },
+  appleButton: {
+    backgroundColor: '#000000',
+    width: '100%',
   },
 });
 
