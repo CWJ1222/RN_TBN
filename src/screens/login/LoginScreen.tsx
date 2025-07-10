@@ -12,6 +12,7 @@ import { Button, LoadingSpinner } from '../../components/common';
 import { login } from '../../store/slices/userSlice';
 import { useNavigation } from '@react-navigation/native';
 import { ApiService } from '../../services/apiService';
+import { AudioService } from '../../services/audioService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // 구글 로그인 관련 import
@@ -67,6 +68,7 @@ const LoginScreen: React.FC = () => {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
+    
     try {
       // 구글 로그인 구현
       await GoogleSignin.hasPlayServices();

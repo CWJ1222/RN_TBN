@@ -84,14 +84,7 @@ const MainScreen: React.FC = () => {
       try {
         const streamUrl = RegionService.getStreamUrl(currentRegion);
         if (streamUrl) {
-          const isAudio = await AudioService.checkStreamUrlIsAudio(streamUrl);
-          if (!isAudio) {
-            Alert.alert(
-              '재생 오류',
-              '이 URL은 오디오 스트림이 아닙니다. 관리자에게 문의하세요.',
-            );
-            return;
-          }
+          // 네이티브에서 직접 재생하므로 오디오 체크 생략
           dispatch(setPlaying(true));
         } else {
           Alert.alert('오류', '스트리밍 URL을 가져올 수 없습니다.');
@@ -234,9 +227,6 @@ const MainScreen: React.FC = () => {
         {/* 오디오 플레이어 */}
         <AudioPlayer
           streamUrl={RegionService.getStreamUrl(currentRegion) || undefined}
-          onError={error => {
-            Alert.alert('재생 오류', error);
-          }}
         />
 
         <View style={styles.controls}>
