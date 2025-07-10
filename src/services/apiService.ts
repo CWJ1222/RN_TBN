@@ -214,4 +214,19 @@ export class ApiService {
       return null;
     }
   }
+
+  // 회원탈퇴(soft delete)
+  static async deleteUser(email: string): Promise<boolean> {
+    try {
+      await this.request('/api/auth/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      return true;
+    } catch (error) {
+      console.error('회원탈퇴 실패:', error);
+      return false;
+    }
+  }
 }

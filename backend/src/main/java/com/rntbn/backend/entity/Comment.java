@@ -30,6 +30,9 @@ public class Comment {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "is_visible_to_user")
+    private boolean isVisibleToUser = true;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -89,4 +92,7 @@ public class Comment {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    public boolean isVisibleToUser() { return isVisibleToUser; }
+    public void setVisibleToUser(boolean visible) { isVisibleToUser = visible; }
 }

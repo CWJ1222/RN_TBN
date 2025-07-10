@@ -177,6 +177,33 @@ const MainScreen: React.FC = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      '회원탈퇴',
+      '정말로 탈퇴하시겠습니까? 탈퇴 후에는 활동 기록이 숨겨집니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '탈퇴',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // API 호출
+              await ApiService.deleteUser(email);
+              // 로그아웃 처리
+              await GoogleSignin.signOut();
+              await AsyncStorage.clear();
+              dispatch(logout());
+              Alert.alert('탈퇴 완료', '계정이 탈퇴 처리되었습니다.');
+            } catch (e) {
+              Alert.alert('오류', '탈퇴 처리 중 오류가 발생했습니다.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
@@ -297,6 +324,12 @@ const MainScreen: React.FC = () => {
                     onPress={handleLogoutPress}
                   >
                     <Text style={styles.menuItemText}>로그아웃</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={handleDeleteAccount}
+                  >
+                    <Text style={styles.menuItemText}>회원탈퇴</Text>
                   </TouchableOpacity>
                 </>
               )}

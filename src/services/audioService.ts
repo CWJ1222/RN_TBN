@@ -11,7 +11,7 @@ export class AudioService {
   static pause() {
     if (Platform.OS === 'android') {
       AudioPlayerModule.pause();
-    }
+  }
   }
   static resume() {
     if (Platform.OS === 'android') {
@@ -26,6 +26,6 @@ export class AudioService {
   static setVolume(volume: number) {
     if (Platform.OS === 'android') {
       AudioPlayerModule.setVolume(volume);
-    }
+  }
   }
 }

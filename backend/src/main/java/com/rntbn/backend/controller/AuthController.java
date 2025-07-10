@@ -16,6 +16,7 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import java.util.Collections;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
 import com.rntbn.backend.dto.UpdateNicknameRequest;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -101,6 +102,13 @@ public class AuthController {
             return ResponseEntity.badRequest()
                     .body(new LoginResponse(null, null, null, "닉네임 수정 실패: " + e.getMessage()));
         }
+    }
+
+    @PostMapping("/delete")
+    public ResponseEntity<?> softDeleteUser(@RequestBody Map<String, String> req) {
+        String email = req.get("email");
+        userService.softDeleteUser(email);
+        return ResponseEntity.ok(Collections.singletonMap("message", "탈퇴 처리 완료"));
     }
 
     // (애플 로그인 엔드포인트도 필요시 추가)

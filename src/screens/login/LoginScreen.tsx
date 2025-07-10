@@ -23,6 +23,63 @@ import {
 } from '@react-native-google-signin/google-signin';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  backButton: {
+    marginRight: 16,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  logo: {
+    fontSize: 40,
+    fontWeight: 'bold',
+    color: '#007AFF',
+  },
+  subtitle: {
+    fontSize: 18,
+    color: '#888',
+    marginTop: 4,
+  },
+  loginContainer: {
+    marginTop: 24,
+  },
+  description: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  googleButton: {
+    marginBottom: 12,
+  },
+  appleButton: {
+    marginBottom: 12,
+  },
+});
+
 const LoginScreen: React.FC = () => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
@@ -131,33 +188,6 @@ const LoginScreen: React.FC = () => {
       setLoading(false);
     }
   };
-  // const handleGoogleLogin = async () => {
-  //   setLoading(true);
-  //   Alert.alert('구글 로그인 버튼 클릭됨');
-  //   try {
-  //     await GoogleSignin.hasPlayServices();
-  //     const userInfo = await GoogleSignin.signIn();
-  //     Alert.alert('userInfo: ' + JSON.stringify(userInfo.data?.idToken));
-  //     const signInResult = userInfo as any;
-
-  //     if (!signInResult.data?.idToken) {
-  //       Alert.alert('idToken 없음');
-  //       return;
-  //     }
-
-  //     Alert.alert('idToken 있음, googleLogin 호출');
-  //     const idToken = signInResult.data?.idToken;
-  //     const user = signInResult.user;
-
-  //     await ApiService.googleLogin(idToken);
-  //     Alert.alert('googleLogin 호출 완료');
-  //   } catch (error) {
-  //     Alert.alert('에러: ' + error);
-  //     console.error('Google login failed:', error);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   const handleAppleLogin = async () => {
     setLoading(true);
@@ -222,64 +252,5 @@ const LoginScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-  },
-  backButton: {
-    marginRight: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000000',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 60,
-  },
-  logo: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 18,
-    color: '#8E8E93',
-  },
-  loginContainer: {
-    alignItems: 'center',
-  },
-  description: {
-    fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
-    marginBottom: 32,
-  },
-  googleButton: {
-    backgroundColor: '#4285F4',
-    width: '100%',
-  },
-  appleButton: {
-    backgroundColor: '#000000',
-    width: '100%',
-  },
-});
 
 export default LoginScreen;
