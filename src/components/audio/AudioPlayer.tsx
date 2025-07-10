@@ -10,13 +10,19 @@ interface AudioPlayerProps {
 const AudioPlayer: React.FC<AudioPlayerProps> = ({ streamUrl }) => {
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1.0);
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  const handlePlay = () => {
-    if (streamUrl) {
-      AudioService.play(streamUrl);
+  const handlePlayPause = () => {
+    if (isPlaying) {
+      AudioService.stop();
+      setIsPlaying(false);
+    } else {
+      if (streamUrl) {
+        AudioService.play(streamUrl);
+        setIsPlaying(true);
+      }
     }
   };
-  const handleStop = () => AudioService.stop();
 
   const handleMute = () => {
     const newMuted = !muted;
@@ -32,11 +38,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ streamUrl }) => {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.button} onPress={handlePlay}>
-        <Text style={styles.buttonText}>재생</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={handleStop}>
-        <Text style={styles.buttonText}>정지</Text>
+      <TouchableOpacity style={styles.button} onPress={handlePlayPause}>
+        <Text style={styles.buttonText}>{isPlaying ? '⏸️' : '▶️'}</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.muteButton} onPress={handleMute}>
         <Text style={styles.buttonText}>{muted ? '🔇' : '🔊'}</Text>
@@ -57,7 +60,7 @@ const styles = StyleSheet.create({
   container: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', margin: 16 },
   button: { backgroundColor: '#2196F3', margin: 4, padding: 12, borderRadius: 8 },
   muteButton: { backgroundColor: '#888', margin: 4, padding: 12, borderRadius: 8 },
-  buttonText: { color: 'white', fontWeight: 'bold' },
+  buttonText: { color: 'white', fontWeight: 'bold', fontSize: 24 },
   slider: { width: 120, marginLeft: 8 },
 });
 

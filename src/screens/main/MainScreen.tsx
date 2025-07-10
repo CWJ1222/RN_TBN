@@ -26,6 +26,7 @@ import RegionSelector from '../../components/RegionSelector/RegionSelector';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 const MainScreen: React.FC = () => {
   const dispatch = useDispatch();
@@ -124,6 +125,8 @@ const MainScreen: React.FC = () => {
     setMenuVisible(false);
 
     try {
+      // 구글 인증 세션까지 로그아웃
+      await GoogleSignin.signOut();
       // 저장된 로그인 정보 삭제
       await AsyncStorage.removeItem('authToken');
       await AsyncStorage.removeItem('email');
