@@ -229,4 +229,17 @@ export class ApiService {
       return false;
     }
   }
+
+  static async getProfile(token: string): Promise<{ email: string; nickname: string } | null> {
+    try {
+      const response = await this.request<{ email: string; nickname: string }>('/api/auth/profile', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response;
+    } catch (error) {
+      console.error('Get profile failed:', error);
+      return null;
+    }
+  }
 }

@@ -110,6 +110,15 @@ const MainScreen: React.FC = () => {
   const handleRegionSelect = (regionId: string) => {
     dispatch(setCurrentRegion(regionId));
     setRegionSelectorVisible(false);
+
+    // 음악이 재생 중이면, 먼저 정지 후 새 지역 음악을 재생
+    if (isPlaying) {
+      AudioService.stop();
+      const streamUrl = RegionService.getStreamUrl(regionId);
+      if (streamUrl) {
+        AudioService.play(streamUrl);
+      }
+    }
   };
 
   const handleMenuPress = () => {

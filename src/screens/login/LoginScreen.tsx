@@ -96,11 +96,13 @@ const LoginScreen: React.FC = () => {
     try {
       const savedToken = await AsyncStorage.getItem('authToken');
       const savedEmail = await AsyncStorage.getItem('email');
-      const savedNickname = await AsyncStorage.getItem('nickname');
-
       if (savedToken && savedEmail) {
-        // 저장된 토큰이 있으면 자동 로그인
-        dispatch(login({ email: savedEmail, nickname: savedNickname || '' }));
+        // 서버에서 닉네임을 받아와서 저장
+        const response = await ApiService.getProfile(savedToken);
+        if (response) {
+          await AsyncStorage.setItem('nickname', response.nickname);
+          dispatch(login({ email: savedEmail, nickname: response.nickname }));
+        }
         (navigation as any).goBack();
       }
     } catch (error) {

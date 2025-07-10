@@ -17,6 +17,7 @@ import java.util.Collections;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
 import com.rntbn.backend.dto.UpdateNicknameRequest;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -101,6 +102,43 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(new LoginResponse(null, null, null, "닉네임 수정 실패: " + e.getMessage()));
+        }
+    }
+
+    // @GetMapping("/profile")
+    // public ResponseEntity<?> getProfile(@RequestHeader("Authorization") String authHeader) {
+    //     String token = authHeader.replace("Bearer ", "");
+    //     String email = jwtService.extractEmail(token);
+    //     User user = userService.findByEmail(email)
+    //         .orElseThrow(() -> new RuntimeException("User not found"));
+    //     return ResponseEntity.ok(Map.of(
+    //         "email", user.getEmail(),
+    //         "nickname", user.getNickname()
+    //     ));
+    // }
+
+    @GetMapping("/profile")
+    public ResponseEntity<?> getProfile(@RequestHeader("Authorization") String authHeader) {
+        try {
+            String token = authHeader.replace("Bearer ", "");
+            String email = jwtService.extractEmail(token);
+            Optional<User> userOpt = userService.findByEmail(email);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                return ResponseEntity.ok(Map.of(
+                    "email", user.getEmail(),
+                    "nickname", user.getNickname()
+                ));
+            } else {
+                // 최초 로그인(가입) 등 DB에 유저가 없을 때
+                return ResponseEntity.ok(Map.of(
+                    "email", email,
+                    "nickname", ""
+                ));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
 

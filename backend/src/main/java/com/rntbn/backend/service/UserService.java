@@ -57,14 +57,15 @@ public class UserService {
         }
 
         if (existingUser != null) {
-            // 기존 사용자 정보 업데이트
+            // soft delete 상태면 복구 + 닉네임 무조건 새로 설정
+            if (existingUser.isDeleted()) {
+                existingUser.setDeleted(false);
+                existingUser.setDeletedAt(null);
+                existingUser.setNickname(nickname);
+            }
             existingUser.setName(name);
             existingUser.setPictureUrl(picture);
             existingUser.setProviderId(providerId);
-            // 기존 사용자에 nickname이 없으면 nickname도 업데이트
-            if (existingUser.getNickname() == null || existingUser.getNickname().isEmpty()) {
-                existingUser.setNickname(nickname);
-            }
             return userRepository.save(existingUser);
         } else {
             // 새 사용자 생성

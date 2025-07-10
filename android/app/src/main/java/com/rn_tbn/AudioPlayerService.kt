@@ -28,6 +28,8 @@ class AudioPlayerService : Service() {
         when (action) {
             "play" -> {
                 url?.let {
+                    player.stop()
+                    player.clearMediaItems()
                     val mediaItem = MediaItem.fromUri(it)
                     player.setMediaItem(mediaItem)
                     player.prepare()
